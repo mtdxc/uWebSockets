@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
     };
 
     int port = 3000;
-    struct us_socket_context_options_t ssl_options = {};
+    uWS::SocketContextOptions ssl_options = {};
 
     while ((option = optparse_long(&options, longopts, nullptr)) != -1) {
         switch (option) {

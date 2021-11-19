@@ -22,22 +22,33 @@ private:
     std::string fileName;
     std::ifstream fin;
     uWS::Loop *loop;
-
+	int namepos = -1;
 public:
+	void log(const char* fmt, ...) {
+		va_list vl;
+		va_start(vl, fmt);
+		char line[1024]; char* p = line;
+		p += sprintf(line, "%s> ", &fileName[namepos + 1]);
+		p += vsprintf(p, fmt, vl); 
+		puts(line);
+		va_end(vl);
+	}
     /* Construct a demo async. file reader for fileName */
     AsyncFileReader(std::string fileName) : fileName(fileName) {
         fin.open(fileName, std::ios::binary);
-
+		namepos = fileName.rfind('/');
+		if(namepos == std::string::npos)
+			namepos = fileName.rfind('\\');
         // get fileSize
         fin.seekg(0, fin.end);
         fileSize = fin.tellg();
 
-        //std::cout << "File size is: " << fileSize << std::endl;
+        log("File size is: %d", fileSize);
 
         // cache up 1 mb!
-        cache.resize(1024 * 1024);
+        cache.resize(std::min<int>(fileSize, 1024 * 1024));
+		log("Caching %d at offset 0", cache.size());
 
-        //std::cout << "Caching 1 MB at offset = " << 0 << std::endl;
         fin.seekg(0, fin.beg);
         fin.read(cache.data(), cache.length());
         cacheOffset = 0;
@@ -53,18 +64,18 @@ public:
         /* Did we hit the cache? */
         if (hasCache && offset >= cacheOffset && ((offset - cacheOffset) < cache.length())) {
             /* Cache hit */
-            //std::cout << "Cache hit!" << std::endl;
 
             /*if (fileSize - offset < cache.length()) {
                 std::cout << "LESS THAN WHAT WE HAVE!" << std::endl;
             }*/
 
             int chunkSize = std::min<int>(fileSize - offset, cache.length() - offset + cacheOffset);
+			log("cache hit %d -> %d", offset, chunkSize);
 
             return std::string_view(cache.data() + offset - cacheOffset, chunkSize);
         } else {
             /* Cache miss */
-            //std::cout << "Cache miss!" << std::endl;
+			log("Cache %d miss!", offset);
             return std::string_view(nullptr, 0);
         }
     }
@@ -77,7 +88,7 @@ public:
         // if queue is full, either block or close the connection via abort!
         if (!hasCache) {
             // already requesting a chunk!
-            std::cout << "ERROR: already requesting a chunk!" << std::endl;
+            log("ERROR: already requesting a chunk!");
             return;
         }
 
@@ -85,14 +96,13 @@ public:
         hasCache = false;
 
         std::async(std::launch::async, [this, cb, offset]() {
-            //std::cout << "ASYNC Caching 1 MB at offset = " << offset << std::endl;
-
-
+            log("ASYNC Caching 1 MB at offset=%d fileSize=%d", offset, fileSize);
 
             // den har stängts! öppna igen!
             if (!fin.good()) {
                 fin.close();
-                //std::cout << "Reopening fin!" << std::endl;
+
+                log("Reopening fin!");
                 fin.open(fileName, std::ios::binary);
             }
             fin.seekg(offset, fin.beg);
@@ -106,11 +116,11 @@ public:
 
                 // båda dessa sker, wtf?
                 if (chunkSize == 0) {
-                    std::cout << "Zero size!?" << std::endl;
+                    log("Zero size!?");
                 }
 
                 if (chunkSize != cache.length()) {
-                    std::cout << "LESS THAN A CACHE 1 MB!" << std::endl;
+                    log("LESS THAN A CACHE 1 MB!");
                 }
 
                 hasCache = true;
@@ -121,7 +131,6 @@ public:
 
     /* Abort any pending async. request */
     void abort() {
-
     }
 
     int getFileSize() {

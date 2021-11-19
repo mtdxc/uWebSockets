@@ -20,6 +20,11 @@ struct AsyncFileStreamer {
 
             char *key = new char[url.length()];
             memcpy(key, url.data(), url.length());
+			for (int i =0; i<url.length(); i++)
+			{
+				if (key[i] == '\\')
+					key[i] = '/';
+			}
             asyncFileReaders[std::string_view(key, url.length())] = new AsyncFileReader(p.path().string());
         }
     }
@@ -29,6 +34,7 @@ struct AsyncFileStreamer {
         auto it = asyncFileReaders.find(url);
         if (it == asyncFileReaders.end()) {
             std::cout << "Did not find file: " << url << std::endl;
+			res->end("no found");
         } else {
             streamFile(res, it->second);
         }
@@ -38,6 +44,9 @@ struct AsyncFileStreamer {
     static void streamFile(uWS::HttpResponse<SSL> *res, AsyncFileReader *asyncFileReader) {
         /* Peek from cache */
         std::string_view chunk = asyncFileReader->peek(res->getWriteOffset());
+		res->onAborted([] {
+			std::cout << "ABORTED!" << std::endl;
+		});
         if (!chunk.length() || res->tryEnd(chunk, asyncFileReader->getFileSize()).first) {
             /* Request new chunk */
             // todo: we need to abort this callback if peer closed!
@@ -50,7 +59,8 @@ struct AsyncFileStreamer {
 
             // us_socket_up_ref eftersom vi delar ägandeskapet
 
-            if (chunk.length() < asyncFileReader->getFileSize()) {
+            if (// chunk.length()
+				res->getWriteOffset() < asyncFileReader->getFileSize()) {
                 asyncFileReader->request(res->getWriteOffset(), [res, asyncFileReader](std::string_view chunk) {
                     // check if we were closed in the mean time
                     //if (us_socket_is_closed()) {
@@ -68,6 +78,7 @@ struct AsyncFileStreamer {
                 });
             }
         } else {
+
             /* We failed writing everything, so let's continue when we can */
             res->onWritable([res, asyncFileReader](int offset) {
 
@@ -76,8 +87,6 @@ struct AsyncFileStreamer {
                 AsyncFileStreamer::streamFile(res, asyncFileReader);
                 // todo: I don't really know what this is supposed to mean?
                 return false;
-            })->onAborted([]() {
-                std::cout << "ABORTED!" << std::endl;
             });
         }
     }

@@ -442,6 +442,14 @@ public:
         return httpResponseData->offset;
     }
 
+	/* Get the current byte write offset for this Http response */
+	uintmax_t setWriteOffset(uintmax_t offset) {
+		HttpResponseData<SSL> *httpResponseData = getHttpResponseData();
+		uintmax_t old = httpResponseData->offset;
+		httpResponseData->offset = offset;
+		return old;
+	}
+
     /* Checking if we have fully responded and are ready for another request */
     bool hasResponded() {
         HttpResponseData<SSL> *httpResponseData = getHttpResponseData();
