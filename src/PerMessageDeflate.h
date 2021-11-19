@@ -22,7 +22,7 @@
 
 #include <cstdint>
 #include <cstring>
-
+#include <algorithm>
 /* We always define these options no matter if ZLIB is enabled or not */
 namespace uWS {
     /* Compressor mode is 8 lowest bits where HIGH4(windowBits), LOW4(memLevel).
