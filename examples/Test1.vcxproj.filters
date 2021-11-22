@@ -1,0 +1,120 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="uWebSocket">
+      <UniqueIdentifier>{4e64be51-ba32-49f1-9ff6-f355ef373489}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="helpers\AsyncFileReader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="helpers\AsyncFileStreamer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="helpers\Middleware.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="helpers\optparse.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\App.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AsyncSocket.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\AsyncSocketData.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\BloomFilter.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HttpContext.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HttpContextData.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HttpParser.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HttpResponse.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HttpResponseData.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\HttpRouter.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Loop.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\LoopData.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MessageParser.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\MoveOnlyFunction.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Multipart.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\PerMessageDeflate.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ProxyParser.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\QueryParser.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\TopicTree.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\Utilities.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WebSocket.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WebSocketContext.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WebSocketContextData.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WebSocketData.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WebSocketExtensions.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WebSocketHandshake.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\WebSocketProtocol.h">
+      <Filter>uWebSocket</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="HttpServer.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

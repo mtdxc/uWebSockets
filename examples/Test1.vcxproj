@@ -19,6 +19,33 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\App.h" />
+    <ClInclude Include="..\src\AsyncSocket.h" />
+    <ClInclude Include="..\src\AsyncSocketData.h" />
+    <ClInclude Include="..\src\BloomFilter.h" />
+    <ClInclude Include="..\src\HttpContext.h" />
+    <ClInclude Include="..\src\HttpContextData.h" />
+    <ClInclude Include="..\src\HttpParser.h" />
+    <ClInclude Include="..\src\HttpResponse.h" />
+    <ClInclude Include="..\src\HttpResponseData.h" />
+    <ClInclude Include="..\src\HttpRouter.h" />
+    <ClInclude Include="..\src\Loop.h" />
+    <ClInclude Include="..\src\LoopData.h" />
+    <ClInclude Include="..\src\MessageParser.h" />
+    <ClInclude Include="..\src\MoveOnlyFunction.h" />
+    <ClInclude Include="..\src\Multipart.h" />
+    <ClInclude Include="..\src\PerMessageDeflate.h" />
+    <ClInclude Include="..\src\ProxyParser.h" />
+    <ClInclude Include="..\src\QueryParser.h" />
+    <ClInclude Include="..\src\TopicTree.h" />
+    <ClInclude Include="..\src\Utilities.h" />
+    <ClInclude Include="..\src\WebSocket.h" />
+    <ClInclude Include="..\src\WebSocketContext.h" />
+    <ClInclude Include="..\src\WebSocketContextData.h" />
+    <ClInclude Include="..\src\WebSocketData.h" />
+    <ClInclude Include="..\src\WebSocketExtensions.h" />
+    <ClInclude Include="..\src\WebSocketHandshake.h" />
+    <ClInclude Include="..\src\WebSocketProtocol.h" />
     <ClInclude Include="helpers\AsyncFileReader.h" />
     <ClInclude Include="helpers\AsyncFileStreamer.h" />
     <ClInclude Include="helpers\Middleware.h" />
