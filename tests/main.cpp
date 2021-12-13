@@ -128,7 +128,7 @@ void measureInternalThroughput(unsigned int payloadLength, int echoes, bool ssl)
     });
 
     h.onMessage([payload, payloadLength, closeMessage, closeMessageLength, echoes](uWS::WebSocket<uWS::CLIENT> *ws, char *message, size_t length, uWS::OpCode opCode) {
-        if (strncmp(message, payload, payloadLength) || payloadLength != length) {
+        if (payloadLength != length || strncmp(message, payload, payloadLength)) {
             std::cout << "FAIL: Messages differ!" << std::endl;
             exit(-1);
         }
