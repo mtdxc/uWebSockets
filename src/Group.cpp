@@ -4,16 +4,6 @@
 namespace uWS {
 
 template <bool isServer>
-void Group<isServer>::setUserData(void *user) {
-    this->userData = user;
-}
-
-template <bool isServer>
-void *Group<isServer>::getUserData() {
-    return userData;
-}
-
-template <bool isServer>
 void Group<isServer>::timerCallback(uS::Timer *timer) {
     Group<isServer> *group = (Group<isServer> *) timer->getData();
 
@@ -156,71 +146,6 @@ void Group<isServer>::stopListening() {
     if (async) {
         async->close();
     }
-}
-
-template <bool isServer>
-void Group<isServer>::onConnection(std::function<void (WebSocket<isServer> *, HttpRequest)> handler) {
-    connectionHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onTransfer(std::function<void (WebSocket<isServer> *)> handler) {
-    transferHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onMessage(std::function<void (WebSocket<isServer> *, char *, size_t, OpCode)> handler) {
-    messageHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onDisconnection(std::function<void (WebSocket<isServer> *, int, char *, size_t)> handler) {
-    disconnectionHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onPing(std::function<void (WebSocket<isServer> *, char *, size_t)> handler) {
-    pingHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onPong(std::function<void (WebSocket<isServer> *, char *, size_t)> handler) {
-    pongHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onError(std::function<void (typename Group::errorType)> handler) {
-    errorHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onHttpConnection(std::function<void (HttpSocket<isServer> *)> handler) {
-    httpConnectionHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onHttpRequest(std::function<void (HttpResponse *, HttpRequest, char *, size_t, size_t)> handler) {
-    httpRequestHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onHttpData(std::function<void(HttpResponse *, char *, size_t, size_t)> handler) {
-    httpDataHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onHttpDisconnection(std::function<void (HttpSocket<isServer> *)> handler) {
-    httpDisconnectionHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onCancelledHttpRequest(std::function<void (HttpResponse *)> handler) {
-    httpCancelledRequestHandler = handler;
-}
-
-template <bool isServer>
-void Group<isServer>::onHttpUpgrade(std::function<void(HttpSocket<isServer> *, HttpRequest)> handler) {
-    httpUpgradeHandler = handler;
 }
 
 template <bool isServer>

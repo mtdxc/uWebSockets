@@ -5,7 +5,7 @@
 
 namespace uWS {
 
-enum Options : unsigned int {
+enum Options {
     NO_OPTIONS = 0,
     PERMESSAGE_DEFLATE = 1,
     SERVER_NO_CONTEXT_TAKEOVER = 2, // remove this

@@ -9,7 +9,7 @@
 
 namespace uWS {
 
-enum OpCode : unsigned char {
+enum OpCode {
     TEXT = 1,
     BINARY = 2,
     CLOSE = 8,

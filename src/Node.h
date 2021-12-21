@@ -7,7 +7,7 @@
 
 namespace uS {
 
-enum ListenOptions : int {
+enum ListenOptions {
     REUSE_PORT = 1,
     ONLY_IPV4 = 2
 };
