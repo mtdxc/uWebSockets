@@ -26,19 +26,25 @@ extern int cbHead;
 struct Timepoint {
     void (*cb)(Timer *);
     Timer *timer;
+    // 超时时刻
     std::chrono::system_clock::time_point timepoint;
+    // repeat delay
     int nextDelay;
 };
 
 struct Loop {
     int epfd;
+    epoll_event readyEvents[1024];
     int numPolls = 0;
+
+    // 用于定时器取消
     bool cancelledLastTimer;
+    // 当前处理的定时器
     Timer *processingTimer = nullptr; // the timer we're currently processing a callback for
     int delay = -1;  // delay to next timer expiry, or -1 if no timers pending
-    epoll_event readyEvents[1024];
     std::chrono::system_clock::time_point timepoint;
     std::vector<Timepoint> timers;
+    // queue for close callback
     std::vector<std::pair<Poll *, void (*)(Poll *)>> closing;
 
     void (*preCb)(void *) = nullptr;
@@ -79,16 +85,16 @@ struct Timer {
     }
 
     void start(void (*cb)(Timer *), int timeout, int repeat) {
+        // 估计要在loop线程中调用
         loop->timepoint = std::chrono::system_clock::now();
         std::chrono::system_clock::time_point timepoint = loop->timepoint + std::chrono::milliseconds(timeout);
 
         Timepoint t = {cb, this, timepoint, repeat};
-        loop->timers.insert(
-            std::upper_bound(loop->timers.begin(), loop->timers.end(), t, [](const Timepoint &a, const Timepoint &b) {
+        auto pos = std::upper_bound(loop->timers.begin(), loop->timers.end(), t, 
+            [](const Timepoint &a, const Timepoint &b) {
                 return a.timepoint < b.timepoint;
-            }),
-            t
-        );
+            });
+        loop->timers.insert(pos, t);
 
         loop->delay = -1;
         if (loop->timers.size()) {
@@ -233,8 +239,9 @@ struct Async : Poll {
         this->cb = cb;
         Poll::setCb([](Poll *p, int, int) {
             uint64_t val;
-            if (::read(((Async *) p)->state.fd, &val, 8) == 8) {
-                ((Async *) p)->cb((Async *) p);
+            Async* s = (Async*)p;
+            if (::read(s->state.fd, &val, 8) == 8) {
+                s->cb(s);
             }
         });
         Poll::start(loop, this, UV_READABLE);

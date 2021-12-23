@@ -42,7 +42,14 @@ Context createContext(std::string certChainFileName, std::string keyFileName, st
     if (keyFilePassword.length()) {
         context.password.reset(new std::string(keyFilePassword));
         SSL_CTX_set_default_passwd_cb_userdata(context.context, context.password.get());
-        SSL_CTX_set_default_passwd_cb(context.context, Context::passwordCallback);
+        SSL_CTX_set_default_passwd_cb(context.context, 
+            [](char *buf, int size, int rwflag, void *u) -> int {
+                std::string *password = (std::string *) u;
+                int length = std::min<int>(size, (int)password->length());
+                memcpy(buf, password->data(), length);
+                buf[length] = '\0';
+                return length;
+            });
     }
 
     SSL_CTX_set_options(context.context, SSL_OP_NO_SSLv3);

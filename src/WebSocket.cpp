@@ -36,8 +36,6 @@ void WebSocket<isServer>::send(const char *message, size_t length, OpCode opCode
     }
 #endif
 
-    const int HEADER_LENGTH = WebSocketProtocol<!isServer, WebSocket<!isServer>>::LONG_MESSAGE_HEADER;
-
     struct TransformData {
         OpCode opCode;
         bool compress;
@@ -46,7 +44,7 @@ void WebSocket<isServer>::send(const char *message, size_t length, OpCode opCode
 
     struct WebSocketTransformer {
         static size_t estimate(const char *data, size_t length) {
-            return length + HEADER_LENGTH;
+          return length + WebSocketProtocol<!isServer, WebSocket<!isServer>>::LONG_MESSAGE_HEADER;
         }
 
         static size_t transform(const char *src, char *dst, size_t length, TransformData transformData) {

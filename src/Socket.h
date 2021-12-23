@@ -28,7 +28,7 @@ protected:
     struct {
         int poll : 4;
         int shuttingDown : 4;
-    } state = {0, false};
+    } state;
 
     SSL *ssl;
     void *user = nullptr;
@@ -412,13 +412,21 @@ protected:
 
 public:
     Socket(NodeData *nodeData, Loop *loop, uv_os_sock_t fd, SSL *ssl) : Poll(loop, fd), ssl(ssl), nodeData(nodeData) {
+        state = { 0, false };
         if (ssl) {
             // OpenSSL treats SOCKETs as int
             SSL_set_fd(ssl, (int) fd);
             SSL_set_mode(ssl, SSL_MODE_RELEASE_BUFFERS);
         }
     }
-
+#if defined(_WIN32) && _MSC_VER <= 1800 // 必须加上这个否则vs2013编译不过..
+    Socket(Socket&& s) : Poll(std::move(s)) {
+      state = s.state; s.state = { 0, false };
+      ssl = s.ssl; s.ssl = nullptr;
+      user = s.user; s.user = nullptr;
+      nodeData = s.nodeData; s.nodeData = nullptr;
+    }
+#endif
     NodeData *getNodeData() {
         return nodeData;
     }

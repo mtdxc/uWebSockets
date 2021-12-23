@@ -10,7 +10,7 @@ void (*callbacks[16])(Poll *, int, int);
 int cbHead = 0;
 
 void Loop::doEpoll(int epollTimeout) {
-    for (std::pair<Poll *, void (*)(Poll *)> c : closing) {
+    for (auto c : closing) {
         numPolls--;
 
         c.second(c.first);

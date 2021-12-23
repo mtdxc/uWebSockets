@@ -11,7 +11,7 @@ using asio = boost::asio;
 typedef boost::asio::deadline_timer steady_timer;
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 using stream = asio::windows::stream_handle;
 #else
 using stream = asio::posix::stream_descriptor;
@@ -135,7 +135,7 @@ struct Poll {
 
     Poll(Loop *loop, uv_os_sock_t fd) {
         socket = new stream(*loop, fd);
-#ifndef WIN32
+#ifndef _WIN32
         socket->non_blocking(true);
 #endif
     }
@@ -159,7 +159,7 @@ struct Poll {
     void reInit(Loop *loop, uv_os_sock_t fd) {
         delete socket;
         socket = new stream(*loop, fd);
-#ifndef WIN32
+#ifndef _WIN32
         socket->non_blocking(true);
 #endif
     }
@@ -206,7 +206,7 @@ struct Poll {
     // think about transfer - should allow one to not delete
     // but in this case it doesn't matter at all
     void close(Loop *loop, void (*cb)(Poll *)) {
-#ifdef WIN32
+#ifdef _WIN32
         socket->close();
 #else
         socket->release();

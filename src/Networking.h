@@ -161,17 +161,9 @@ protected:
     SSL_CTX *context = nullptr;
     std::shared_ptr<std::string> password;
 
-    static int passwordCallback(char *buf, int size, int rwflag, void *u)
-    {
-        std::string *password = (std::string *) u;
-        int length = std::min<int>(size, (int) password->length());
-        memcpy(buf, password->data(), length);
-        buf[length] = '\0';
-        return length;
-    }
-
 public:
     friend Context WIN32_EXPORT createContext(std::string certChainFileName, std::string keyFileName, std::string keyFilePassword);
+
     Context(SSL_CTX *context) : context(context) {
 
     }
@@ -180,6 +172,7 @@ public:
     Context(const Context &other);
     Context &operator=(const Context &other);
     ~Context();
+
     operator bool() {
         return context;
     }
@@ -200,12 +193,15 @@ struct WIN32_EXPORT NodeData {
     char *recvBufferMemoryBlock;
     char *recvBuffer;
     int recvLength;
+
     Loop *loop;
     uS::Context *netContext;
+    SSL_CTX *clientContext;
+
     void *user = nullptr;
+
     static const int preAllocMaxSize = 1024;
     char **preAlloc;
-    SSL_CTX *clientContext;
 
     Async *async = nullptr;
     pthread_t tid;
@@ -216,6 +212,7 @@ struct WIN32_EXPORT NodeData {
     static void asyncCallback(Async *async);
 
     static int getMemoryBlockIndex(size_t length) {
+        // 16向上取证
         return (int) ((length >> 4) + bool(length & 15));
     }
 
