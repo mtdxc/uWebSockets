@@ -97,6 +97,7 @@ public:
         memset(&hints, 0, sizeof(addrinfo));
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
+        //@todo block function
         if (getaddrinfo(hostname, std::to_string(port).c_str(), &hints, &result) != 0) {
             return nullptr;
         }
@@ -106,7 +107,7 @@ public:
             freeaddrinfo(result);
             return nullptr;
         }
-
+        
         ::connect(fd, result->ai_addr, result->ai_addrlen);
         freeaddrinfo(result);
 

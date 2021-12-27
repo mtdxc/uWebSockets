@@ -9,7 +9,7 @@
 
 namespace uWS {
 
-enum OpCode {
+enum OpCode : unsigned char {
     TEXT = 1,
     BINARY = 2,
     CLOSE = 8,
@@ -26,19 +26,14 @@ enum {
 template <bool isServer>
 struct WebSocketState {
 public:
-    static const unsigned int SHORT_MESSAGE_HEADER = isServer ? 6 : 2;
-    static const unsigned int MEDIUM_MESSAGE_HEADER = isServer ? 8 : 4;
-    static const unsigned int LONG_MESSAGE_HEADER = isServer ? 14 : 10;
-
     // 16 bytes
     struct State {
         unsigned int wantsHead : 1;
-        unsigned int spillLength : 4;
-        int opStack : 2; // -1, 0, 1
         unsigned int lastFin : 1;
-
+        int opStack : 2; // -1, 0, 1
+        unsigned int spillLength : 4;
         // 15 bytes
-        unsigned char spill[LONG_MESSAGE_HEADER - 1];
+        unsigned char spill[isServer ? 13 : 9];
         OpCode opCode[2];
 
         State() {
@@ -63,7 +58,7 @@ public:
     static const unsigned int LONG_MESSAGE_HEADER = isServer ? 14 : 10;
 
 protected:
-    static inline bool isFin(char *frame) {return *((unsigned char *) frame) & 128;}
+    static inline bool isFin(char *frame) { return *((unsigned char *)frame) & 128; }
     static inline unsigned char getOpCode(char *frame) {return *((unsigned char *) frame) & 15;}
     static inline unsigned char payloadLength(char *frame) {return ((unsigned char *) frame)[1] & 127;}
     static inline bool rsv23(char *frame) {return *((unsigned char *) frame) & 48;}

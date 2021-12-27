@@ -187,7 +187,7 @@ Context WIN32_EXPORT createContext(std::string certChainFileName, std::string ke
 }
 
 struct Socket;
-
+// 这像是线程的上下文
 // NodeData is like a Context, maybe merge them?
 struct WIN32_EXPORT NodeData {
     char *recvBufferMemoryBlock;
@@ -200,17 +200,16 @@ struct WIN32_EXPORT NodeData {
 
     void *user = nullptr;
 
-    static const int preAllocMaxSize = 1024;
-    char **preAlloc;
-
-    Async *async = nullptr;
     pthread_t tid;
+    Async *async = nullptr;
 
     std::recursive_mutex *asyncMutex;
-    std::vector<Poll *> transferQueue;
-    std::vector<Poll *> changePollQueue;
-    static void asyncCallback(Async *async);
+    std::vector<Socket *> transferQueue;
+    std::vector<Socket *> changePollQueue;
+    void asyncCallback();
 
+    static const int preAllocMaxSize = 1024;
+    char **preAlloc;
     static int getMemoryBlockIndex(size_t length) {
         // 16向上取证
         return (int) ((length >> 4) + bool(length & 15));
@@ -238,16 +237,29 @@ public:
     void addAsync() {
         async = new Async(loop);
         async->setData(this);
-        async->start(NodeData::asyncCallback);
+        async->start([](Async* sync) {
+            NodeData* pThis = (NodeData*)sync->getData();
+            pThis->asyncCallback();
+        });
     }
-
-    void clearPendingPollChanges(Poll *p) {
-        asyncMutex->lock();
+    void queueChange(Socket* p) {
+        std::unique_lock<std::recursive_mutex> l(*asyncMutex);
+        changePollQueue.push_back(p);
+        async->send();
+    }
+    void queueTransfer(Socket* p) {
+        std::unique_lock<std::recursive_mutex> l(*asyncMutex);
+        bool empty = transferQueue.empty();
+        transferQueue.push_back(p);
+        if (empty)
+            async->send();
+    }
+    void clearPendingPollChanges(Socket *p) {
+        std::unique_lock<std::recursive_mutex> l(*asyncMutex);
         changePollQueue.erase(
             std::remove(changePollQueue.begin(), changePollQueue.end(), p),
             changePollQueue.end()
         );
-        asyncMutex->unlock();
     }
 };
 

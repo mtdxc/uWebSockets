@@ -7,7 +7,7 @@ template <bool isServer>
 void Group<isServer>::timerCallback(uS::Timer *timer) {
     Group<isServer> *group = (Group<isServer> *) timer->getData();
 
-    group->forEach([](uWS::WebSocket<isServer> *webSocket) {
+    group->forEachWebSocket([](uWS::WebSocket<isServer> *webSocket) {
         if (webSocket->hasOutstandingPong) {
             webSocket->terminate();
         } else {
@@ -108,7 +108,9 @@ void Group<isServer>::removeWebSocket(WebSocket<isServer> *webSocket) {
 }
 
 template <bool isServer>
-Group<isServer>::Group(int extensionOptions, unsigned int maxPayload, Hub *hub, uS::NodeData *nodeData) : uS::NodeData(*nodeData), maxPayload(maxPayload), hub(hub), extensionOptions(extensionOptions) {
+Group<isServer>::Group(int extensionOptions, unsigned int maxPayload, Hub *hub, uS::NodeData *nodeData) 
+  : uS::NodeData(*nodeData), maxPayload(maxPayload), hub(hub), extensionOptions(extensionOptions) 
+{
     connectionHandler = [](WebSocket<isServer> *, HttpRequest) {};
     transferHandler = [](WebSocket<isServer> *) {};
     messageHandler = [](WebSocket<isServer> *, char *, size_t, OpCode) {};
@@ -156,7 +158,7 @@ void Group<isServer>::broadcast(const char *message, size_t length, OpCode opCod
 #endif
 
     typename WebSocket<isServer>::PreparedMessage *preparedMessage = WebSocket<isServer>::prepareMessage((char *) message, length, opCode, false);
-    forEach([preparedMessage](uWS::WebSocket<isServer> *ws) {
+    forEachWebSocket([preparedMessage](uWS::WebSocket<isServer> *ws) {
         ws->sendPrepared(preparedMessage);
     });
     WebSocket<isServer>::finalizeMessage(preparedMessage);
@@ -165,7 +167,7 @@ void Group<isServer>::broadcast(const char *message, size_t length, OpCode opCod
 template <bool isServer>
 void Group<isServer>::terminate() {
     stopListening();
-    forEach([](uWS::WebSocket<isServer> *ws) {
+    forEachWebSocket([](uWS::WebSocket<isServer> *ws) {
         ws->terminate();
     });
     forEachHttpSocket([](HttpSocket<isServer> *httpSocket) {
@@ -176,7 +178,7 @@ void Group<isServer>::terminate() {
 template <bool isServer>
 void Group<isServer>::close(int code, char *message, size_t length) {
     stopListening();
-    forEach([code, message, length](uWS::WebSocket<isServer> *ws) {
+    forEachWebSocket([code, message, length](uWS::WebSocket<isServer> *ws) {
         ws->close(code, message, length);
     });
     forEachHttpSocket([](HttpSocket<isServer> *httpSocket) {

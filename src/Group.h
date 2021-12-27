@@ -36,6 +36,7 @@ public:
     void onHttpRequest(HttpRequestHandler handler) { httpRequestHandler = handler; }
     using HttpDataHandler = std::function<void(HttpResponse *, char *data, size_t length, size_t remainingBytes)>;
     void onHttpData(HttpDataHandler handler) { httpDataHandler = handler; }
+    // 响应被取消回调，httpSocket::end主动断开时回调，之后response对象失效
     using HttpCancelledRequestHandler = std::function<void(HttpResponse *)>;
     void onCancelledHttpRequest(HttpCancelledRequestHandler handler) { httpCancelledRequestHandler = handler; }
     using HttpDisconnectionHandler = std::function<void(HttpSocket<isServer> *)>;
@@ -70,37 +71,27 @@ public:
         }
     }
 
-    template <class F>
-    void forEach(const F &cb) {
-        uS::Poll *iterator = webSocketHead;
-        iterators.push(iterator);
-        while (iterator) {
-            uS::Poll *lastIterator = iterator;
-            cb((WebSocket<isServer> *) iterator);
-            iterator = iterators.top();
-            if (lastIterator == iterator) {
-                iterator = ((uS::Socket *) iterator)->next;
-                iterators.top() = iterator;
-            }
+    template <class T>
+    void forEach(T head, std::function<void (T)> cb) {
+      uS::Socket *iterator = head;
+      iterators.push(iterator);
+      while (iterator) {
+        auto lastIterator = iterator;
+        cb((T) iterator);
+        iterator = iterators.top();
+        if (lastIterator == iterator) {
+          iterator = iterator->next;
+          iterators.top() = iterator;
         }
-        iterators.pop();
+      }
+      iterators.pop();
     }
 
-    // duplicated code for now!
-    template <class F>
-    void forEachHttpSocket(const F &cb) {
-        uS::Poll *iterator = httpSocketHead;
-        iterators.push(iterator);
-        while (iterator) {
-            uS::Poll *lastIterator = iterator;
-            cb((HttpSocket<isServer> *) iterator);
-            iterator = iterators.top();
-            if (lastIterator == iterator) {
-                iterator = ((uS::Socket *) iterator)->next;
-                iterators.top() = iterator;
-            }
-        }
-        iterators.pop();
+    void forEachWebSocket(std::function<void(WebSocket<isServer>*)> cb) {
+      forEach(webSocketHead, cb);
+    }
+    void forEachHttpSocket(std::function<void(HttpSocket<isServer>*)> cb) {
+      forEach(httpSocketHead, cb);
     }
 
     static Group<isServer> *from(uS::Socket *s) {
@@ -130,7 +121,7 @@ protected:
     int extensionOptions;
     uS::Timer *timer = nullptr, *httpTimer = nullptr;
     std::string userPingMessage;
-    std::stack<uS::Poll *> iterators;
+    std::stack<uS::Socket *> iterators;
 
     // todo: cannot be named user, collides with parent!
     void *userData = nullptr;

@@ -3,18 +3,15 @@
 namespace uS {
 
 // this should be Node
-void NodeData::asyncCallback(Async *async)
+void NodeData::asyncCallback()
 {
-    NodeData *nodeData = (NodeData *) async->getData();
-
-    nodeData->asyncMutex->lock();
-    for (Poll *p : nodeData->transferQueue) {
-        Socket *s = (Socket *) p;
+    std::unique_lock<std::recursive_mutex> l(*asyncMutex);
+    for (Socket *s : transferQueue) {
         TransferData *transferData = (TransferData *) s->getUserData();
 
-        s->reInit(nodeData->loop, transferData->fd);
+        s->reInit(loop, transferData->fd);
         s->setCb(transferData->pollCb);
-        s->start(nodeData->loop, s, s->setPoll(transferData->pollEvents));
+        s->start(loop, s, s->setPoll(transferData->pollEvents));
 
         s->nodeData = transferData->destination;
         s->setUserData(transferData->userData);
@@ -24,14 +21,12 @@ void NodeData::asyncCallback(Async *async)
         transferCb(s);
     }
 
-    for (Poll *p : nodeData->changePollQueue) {
-        Socket *s = (Socket *) p;
+    for (Socket *s : changePollQueue) {
         s->change(s->nodeData->loop, s, s->getPoll());
     }
 
-    nodeData->changePollQueue.clear();
-    nodeData->transferQueue.clear();
-    nodeData->asyncMutex->unlock();
+    changePollQueue.clear();
+    transferQueue.clear();
 }
 
 Node::Node(int recvLength, int prePadding, int postPadding, bool useDefaultLoop) {

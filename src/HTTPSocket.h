@@ -12,11 +12,13 @@ struct Header {
     unsigned int keyLength, valueLength;
 
     operator bool() {
+        // key为null来表示bool
         return key;
     }
 
     // slow without string_view!
     std::string toString() {
+        if (!value || !valueLength) return std::string();
         return std::string(value, valueLength);
     }
 };
@@ -35,13 +37,14 @@ enum HttpMethod {
 };
 
 struct HttpRequest {
+    // 以null结尾，且第一个键为 method : url
     Header *headers;
-    Header getHeader(const char *key) {
-        return getHeader(key, strlen(key));
-    }
 
     HttpRequest(Header *headers = nullptr) : headers(headers) {}
 
+    Header getHeader(const char *key) {
+        return getHeader(key, strlen(key));
+    }
     Header getHeader(const char *key, size_t length) {
         if (headers) {
             for (Header *h = headers; *++h; ) {
@@ -54,14 +57,14 @@ struct HttpRequest {
     }
 
     Header getUrl() {
-        if (headers->key) {
+        if (headers && headers->key) {
             return *headers;
         }
         return {nullptr, nullptr, 0, 0};
     }
 
     HttpMethod getMethod() {
-        if (!headers->key) {
+        if (!headers ||!headers->key) {
             return METHOD_INVALID;
         }
         switch (headers->keyLength) {
@@ -108,10 +111,13 @@ struct HttpResponse;
 template <const bool isServer>
 struct WIN32_EXPORT HttpSocket : uS::Socket {
     void *httpUser; // remove this later, setTimeout occupies user for now
+    // 多个http响应列表，按请求顺序，从头到尾排序
     HttpResponse *outstandingResponsesHead = nullptr;
     HttpResponse *outstandingResponsesTail = nullptr;
+    // 响应内存池(只保存一项)
     HttpResponse *preAllocatedResponse = nullptr;
 
+    // http头部缓冲区
     std::string httpBuffer;
     size_t contentLength = 0;
     bool missedDeadline = false;
@@ -139,7 +145,7 @@ struct HttpResponse {
     HttpResponse *next = nullptr;
     void *userData = nullptr;
     void *extraUserData = nullptr;
-    HttpSocket<true>::Queue::Message *messageQueue = nullptr;
+    uS::Socket::Queue::Message *messageQueue = nullptr;
     bool hasEnded = false;
     bool hasHead = false;
 
@@ -147,14 +153,14 @@ struct HttpResponse {
 
     }
 
-    template <bool isServer>
-    static HttpResponse *allocateResponse(HttpSocket<isServer> *httpSocket) {
+    //template <bool isServer>
+    static HttpResponse *allocateResponse(HttpSocket<true> *httpSocket) {
         if (httpSocket->preAllocatedResponse) {
             HttpResponse *ret = httpSocket->preAllocatedResponse;
             httpSocket->preAllocatedResponse = nullptr;
             return ret;
         } else {
-            return new HttpResponse((HttpSocket<true> *) httpSocket);
+            return new HttpResponse(httpSocket);
         }
     }
 
@@ -166,106 +172,15 @@ struct HttpResponse {
             httpData->preAllocatedResponse = this;
         }
     }
-
+    // 必须自己构造http头部...
     void write(const char *message, size_t length = 0,
                void(*callback)(void *httpSocket, void *data, bool cancelled, void *reserved) = nullptr,
-               void *callbackData = nullptr) {
-
-        struct NoopTransformer {
-            static size_t estimate(const char *data, size_t length) {
-                return length;
-            }
-
-            static size_t transform(const char *src, char *dst, size_t length, int transformData) {
-                memcpy(dst, src, length);
-                return length;
-            }
-        };
-
-        httpSocket->sendTransformed<NoopTransformer>(message, length, callback, callbackData, 0);
-        hasHead = true;
-    }
+               void *callbackData = nullptr);
 
     // todo: maybe this function should have a fast path for 0 length?
     void end(const char *message = nullptr, size_t length = 0,
              void(*callback)(void *httpResponse, void *data, bool cancelled, void *reserved) = nullptr,
-             void *callbackData = nullptr) {
-
-        struct TransformData {
-            bool hasHead;
-        } transformData = {hasHead};
-
-        struct HttpTransformer {
-
-            // todo: this should get TransformData!
-            static size_t estimate(const char *data, size_t length) {
-                return length + 128;
-            }
-
-            static size_t transform(const char *src, char *dst, size_t length, TransformData transformData) {
-                // todo: sprintf is extremely slow
-                int offset = transformData.hasHead ? 0 : std::sprintf(dst, "HTTP/1.1 200 OK\r\nContent-Length: %u\r\n\r\n", (unsigned int) length);
-                memcpy(dst + offset, src, length);
-                return length + offset;
-            }
-        };
-
-        if (httpSocket->outstandingResponsesHead != this) {
-            HttpSocket<true>::Queue::Message *messagePtr = httpSocket->allocMessage(HttpTransformer::estimate(message, length));
-            messagePtr->length = HttpTransformer::transform(message, (char *) messagePtr->data, length, transformData);
-            messagePtr->callback = callback;
-            messagePtr->callbackData = callbackData;
-            messagePtr->nextMessage = messageQueue;
-            messageQueue = messagePtr;
-            hasEnded = true;
-        } else {
-            httpSocket->sendTransformed<HttpTransformer>(message, length, callback, callbackData, transformData);
-            // move head as far as possible
-            HttpResponse *head = next;
-            while (head) {
-                // empty message queue
-                HttpSocket<true>::Queue::Message *messagePtr = head->messageQueue;
-                while (messagePtr) {
-                    HttpSocket<true>::Queue::Message *nextMessage = messagePtr->nextMessage;
-
-                    bool wasTransferred;
-                    if (httpSocket->write(messagePtr, wasTransferred)) {
-                        if (!wasTransferred) {
-                            httpSocket->freeMessage(messagePtr);
-                            if (callback) {
-                                callback(this, callbackData, false, nullptr);
-                            }
-                        } else {
-                            messagePtr->callback = callback;
-                            messagePtr->callbackData = callbackData;
-                        }
-                    } else {
-                        httpSocket->freeMessage(messagePtr);
-                        if (callback) {
-                            callback(this, callbackData, true, nullptr);
-                        }
-                        goto updateHead;
-                    }
-                    messagePtr = nextMessage;
-                }
-                // cannot go beyond unfinished responses
-                if (!head->hasEnded) {
-                    break;
-                } else {
-                    HttpResponse *next = head->next;
-                    head->freeResponse(httpSocket);
-                    head = next;
-                }
-            }
-            updateHead:
-            httpSocket->outstandingResponsesHead = head;
-            if (!head) {
-                httpSocket->outstandingResponsesTail = nullptr;
-            }
-
-            freeResponse(httpSocket);
-        }
-    }
+             void *callbackData = nullptr);
 
     void setUserData(void *userData) {
         this->userData = userData;

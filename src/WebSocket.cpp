@@ -24,7 +24,10 @@ WebSocket<isServer>::WebSocket(bool perMessageDeflate, uS::Socket *socket) : uS:
  *
  */
 template <bool isServer>
-void WebSocket<isServer>::send(const char *message, size_t length, OpCode opCode, void(*callback)(WebSocket<isServer> *webSocket, void *data, bool cancelled, void *reserved), void *callbackData, bool compress) {
+void WebSocket<isServer>::send(const char *message, size_t length, OpCode opCode, 
+  void(*callback)(WebSocket<isServer> *webSocket, void *data, bool cancelled, void *reserved), 
+  void *callbackData, bool compress) 
+{
 
 #ifdef UWS_THREADSAFE
     std::lock_guard<std::recursive_mutex> lockGuard(*nodeData->asyncMutex);
@@ -40,11 +43,11 @@ void WebSocket<isServer>::send(const char *message, size_t length, OpCode opCode
         OpCode opCode;
         bool compress;
         WebSocket<isServer> *s;
-    } transformData = {opCode, compress && compressionStatus == WebSocket<isServer>::CompressionStatus::ENABLED && opCode < 3, this};
+    } transformData = {opCode, compress && compressionStatus == CompressionStatus::ENABLED && opCode < 3, this};
 
     struct WebSocketTransformer {
         static size_t estimate(const char *data, size_t length) {
-          return length + WebSocketProtocol<!isServer, WebSocket<!isServer>>::LONG_MESSAGE_HEADER;
+            return length + WebSocketProtocol<!isServer, WebSocket<!isServer>>::LONG_MESSAGE_HEADER;
         }
 
         static size_t transform(const char *src, char *dst, size_t length, TransformData transformData) {
@@ -70,7 +73,8 @@ void WebSocket<isServer>::send(const char *message, size_t length, OpCode opCode
  *
  */
 template <bool isServer>
-typename WebSocket<isServer>::PreparedMessage *WebSocket<isServer>::prepareMessage(char *data, size_t length, OpCode opCode, bool compressed, void(*callback)(WebSocket<isServer> *webSocket, void *data, bool cancelled, void *reserved)) {
+typename WebSocket<isServer>::PreparedMessage *WebSocket<isServer>::prepareMessage(char *data, size_t length, OpCode opCode, bool compressed, 
+  void(*callback)(WebSocket<isServer> *webSocket, void *data, bool cancelled, void *reserved)) {
     PreparedMessage *preparedMessage = new PreparedMessage;
     preparedMessage->buffer = new char[length + 10];
     preparedMessage->length = WebSocketProtocol<isServer, WebSocket<isServer>>::formatMessage(preparedMessage->buffer, data, length, opCode, length, compressed);
@@ -89,7 +93,8 @@ typename WebSocket<isServer>::PreparedMessage *WebSocket<isServer>::prepareMessa
  *
  */
 template <bool isServer>
-typename WebSocket<isServer>::PreparedMessage *WebSocket<isServer>::prepareMessageBatch(std::vector<std::string> &messages, std::vector<int> &excludedMessages, OpCode opCode, bool compressed, void (*callback)(WebSocket<isServer> *, void *, bool, void *))
+typename WebSocket<isServer>::PreparedMessage *WebSocket<isServer>::prepareMessageBatch(std::vector<std::string> &messages, std::vector<int> &excludedMessages, OpCode opCode, bool compressed, 
+  void (*callback)(WebSocket<isServer> *, void *, bool, void *))
 {
     // should be sent in!
     size_t batchLength = 0;

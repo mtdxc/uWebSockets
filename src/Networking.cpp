@@ -1,4 +1,7 @@
 #include "Networking.h"
+#ifdef _WIN32
+#pragma comment(lib, "Ws2_32.lib")
+#endif
 
 namespace uS {
 
@@ -28,8 +31,22 @@ Context::~Context()
 }
 
 struct Init {
-    Init() {SSL_library_init();}
-    ~Init() {/*EVP_cleanup();*/}
+    Init() {
+        SSL_library_init();
+
+#ifdef _WIN32
+        WSADATA wsaData;
+        WSAStartup(MAKEWORD(2, 2), &wsaData);
+#else
+        signal(SIGPIPE, SIG_IGN);
+#endif
+    }
+    ~Init() {
+        /*EVP_cleanup();*/
+#ifdef _WIN32
+        WSACleanup();
+#endif
+    }
 } init;
 
 Context createContext(std::string certChainFileName, std::string keyFileName, std::string keyFilePassword)
@@ -64,22 +81,5 @@ Context createContext(std::string certChainFileName, std::string keyFileName, st
 }
 
 }
-
-#ifndef _WIN32
-struct Init {
-    Init() {signal(SIGPIPE, SIG_IGN);}
-} init;
-#endif
-
-#ifdef _WIN32
-#pragma comment(lib, "Ws2_32.lib")
-
-struct WindowsInit {
-    WSADATA wsaData;
-    WindowsInit() {WSAStartup(MAKEWORD(2, 2), &wsaData);}
-    ~WindowsInit() {WSACleanup();}
-} windowsInit;
-
-#endif
 
 }

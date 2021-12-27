@@ -14,7 +14,7 @@ struct TransferData {
     void (*pollCb)(Poll *, int, int);
     int pollEvents;
 
-    // User state
+    // saved origin User state
     void *userData;
 
     // Destination
@@ -92,26 +92,16 @@ protected:
         stop(this->nodeData->loop);
         close(this->nodeData->loop, [](Poll *p) {
             Socket *s = (Socket *) p;
+
             TransferData *transferData = (TransferData *) s->getUserData();
-
-            transferData->destination->asyncMutex->lock();
-            bool wasEmpty = transferData->destination->transferQueue.empty();
-            transferData->destination->transferQueue.push_back(s);
-            transferData->destination->asyncMutex->unlock();
-
-            if (wasEmpty) {
-                transferData->destination->async->send();
-            }
+            transferData->destination->queueTransfer(s);
         });
     }
 
     void changePoll(Socket *socket) {
         if (!threadSafeChange(nodeData->loop, this, socket->getPoll())) {
             if (socket->nodeData->tid != pthread_self()) {
-                socket->nodeData->asyncMutex->lock();
-                socket->nodeData->changePollQueue.push_back(socket);
-                socket->nodeData->asyncMutex->unlock();
-                socket->nodeData->async->send();
+                socket->nodeData->queueChange(socket);
             } else {
                 change(socket->nodeData->loop, socket, socket->getPoll());
             }
@@ -129,7 +119,7 @@ protected:
             onTimeout(s);
         }, timeoutMs, 0);
 
-        user = timer;
+        setUserData(timer);
     }
 
     void cancelTimeout() {
@@ -146,7 +136,7 @@ protected:
         Socket *socket = (Socket *) p;
 
         if (status < 0) {
-            STATE::onEnd((Socket *) p);
+            STATE::onEnd(socket);
             return;
         }
 
@@ -176,7 +166,7 @@ protected:
                         }
                         break;
                     default:
-                        STATE::onEnd((Socket *) p);
+                        STATE::onEnd(socket);
                         return;
                     }
                     break;
@@ -198,7 +188,7 @@ protected:
                         }
                         break;
                     default:
-                        STATE::onEnd((Socket *) p);
+                        STATE::onEnd(socket);
                         return;
                     }
                     break;
@@ -220,7 +210,7 @@ protected:
         Context *netContext = nodeData->netContext;
 
         if (status < 0) {
-            STATE::onEnd((Socket *) p);
+            STATE::onEnd(socket);
             return;
         }
 
@@ -242,7 +232,7 @@ protected:
                         }
                     } else if (sent == SOCKET_ERROR) {
                         if (!netContext->wouldBlock()) {
-                            STATE::onEnd((Socket *) p);
+                            STATE::onEnd(socket);
                             return;
                         }
                         break;
@@ -261,7 +251,7 @@ protected:
             if (length > 0) {
                 STATE::onData((Socket *) p, nodeData->recvBuffer, length);
             } else if (length <= 0 || (length == SOCKET_ERROR && !netContext->wouldBlock())) {
-                STATE::onEnd((Socket *) p);
+                STATE::onEnd(socket);
             }
         }
 
@@ -286,10 +276,10 @@ protected:
 
     Queue::Message *allocMessage(size_t length, const char *data = 0) {
         Queue::Message *messagePtr = (Queue::Message *) new char[sizeof(Queue::Message) + length];
-        messagePtr->length = length;
-        messagePtr->data = ((char *) messagePtr) + sizeof(Queue::Message);
         messagePtr->nextMessage = nullptr;
 
+        messagePtr->length = length;
+        messagePtr->data = (char *)(messagePtr+1);
         if (data) {
             memcpy((char *) messagePtr->data, data, messagePtr->length);
         }
@@ -302,9 +292,8 @@ protected:
     }
 
     bool write(Queue::Message *message, bool &wasTransferred) {
-        ssize_t sent = 0;
         if (messageQueue.empty()) {
-
+            ssize_t sent = 0;
             if (ssl) {
                 sent = SSL_write(ssl, message->data, (int) message->length);
                 if (sent == (ssize_t) message->length) {
@@ -334,6 +323,7 @@ protected:
                         return false;
                     }
                 } else {
+                    // advance ptr
                     message->length -= sent;
                     message->data += sent;
                 }
@@ -350,19 +340,22 @@ protected:
     }
 
     template <class T, class D>
-    void sendTransformed(const char *message, size_t length, void(*callback)(void *socket, void *data, bool cancelled, void *reserved), void *callbackData, D transformData) {
+    void sendTransformed(const char *message, size_t length, 
+        void(*callback)(void *socket, void *data, bool cancelled, void *reserved), 
+        void *callbackData, 
+        D transformData) 
+    {
         size_t estimatedLength = T::estimate(message, length) + sizeof(Queue::Message);
 
         if (hasEmptyQueue()) {
             if (estimatedLength <= uS::NodeData::preAllocMaxSize) {
-                int memoryLength = (int) estimatedLength;
-                int memoryIndex = nodeData->getMemoryBlockIndex(memoryLength);
+                int memoryIndex = nodeData->getMemoryBlockIndex(estimatedLength);
 
                 Queue::Message *messagePtr = (Queue::Message *) nodeData->getSmallMemoryBlock(memoryIndex);
-                messagePtr->data = ((char *) messagePtr) + sizeof(Queue::Message);
+                messagePtr->data = (char *)(messagePtr + 1);
                 messagePtr->length = T::transform(message, (char *) messagePtr->data, length, transformData);
 
-                bool wasTransferred;
+                bool wasTransferred = false;
                 if (write(messagePtr, wasTransferred)) {
                     if (!wasTransferred) {
                         nodeData->freeSmallMemoryBlock((char *) messagePtr, memoryIndex);
@@ -383,7 +376,7 @@ protected:
                 Queue::Message *messagePtr = allocMessage(estimatedLength - sizeof(Queue::Message));
                 messagePtr->length = T::transform(message, (char *) messagePtr->data, length, transformData);
 
-                bool wasTransferred;
+                bool wasTransferred = false;
                 if (write(messagePtr, wasTransferred)) {
                     if (!wasTransferred) {
                         freeMessage(messagePtr);
@@ -406,7 +399,7 @@ protected:
             messagePtr->length = T::transform(message, (char *) messagePtr->data, length, transformData);
             messagePtr->callback = callback;
             messagePtr->callbackData = callbackData;
-            enqueue(messagePtr);
+            messageQueue.push(messagePtr);
         }
     }
 
@@ -427,11 +420,12 @@ public:
       nodeData = s.nodeData; s.nodeData = nullptr;
     }
 #endif
+    // 存放group信息的
     NodeData *getNodeData() {
         return nodeData;
     }
 
-    Poll *next = nullptr, *prev = nullptr;
+    Socket *next = nullptr, *prev = nullptr;
 
     void *getUserData() {
         return user;
@@ -479,8 +473,8 @@ public:
     template <class T>
     void closeSocket() {
         uv_os_sock_t fd = getFd();
-        Context *netContext = nodeData->netContext;
         stop(nodeData->loop);
+        Context *netContext = nodeData->netContext;
         netContext->closeSocket(fd);
 
         if (ssl) {
@@ -503,7 +497,6 @@ public:
 struct ListenSocket : Socket {
 
     ListenSocket(NodeData *nodeData, Loop *loop, uv_os_sock_t fd, SSL *ssl) : Socket(nodeData, loop, fd, ssl) {
-
     }
 
     Timer *timer = nullptr;
